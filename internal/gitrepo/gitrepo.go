@@ -17,7 +17,7 @@ package gitrepo
 
 import (
 	"context"
-	"strings"
+	"os"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -30,11 +30,23 @@ type Repo struct {
 
 // CloneOrOpen clones repoPath if it is an HTTP(S) URL, or opens it from the
 // local disk otherwise.
-func CloneOrOpen(ctx context.Context, repoPath string) (*Repo, error) {
-	if strings.HasPrefix(repoPath, "http://") || strings.HasPrefix(repoPath, "https://") {
-		return Clone(ctx, repoPath)
+func CloneOrOpen(ctx context.Context, repoPath, repoURL string) (*Repo, error) {
+	_, err := os.Stat(repoPath)
+	if err == nil {
+		return Open(ctx, repoPath)
 	}
-	return Open(ctx, repoPath)
+
+	if !os.IsNotExist(err) {
+		return nil, err
+	}
+	repo, err := git.PlainClone(repoPath, false, &git.CloneOptions{
+		URL:      repoURL,
+		Progress: os.Stdout,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Repo{repo: repo}, nil
 }
 
 // Clone returns a bare repo by cloning the repo at repoURL.

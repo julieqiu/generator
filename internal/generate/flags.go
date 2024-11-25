@@ -66,7 +66,7 @@ func validateConfig(cfg *config) error {
 	case "cpp":
 		return errNotImplemented
 	case "csharp":
-		return errNotImplemented
+		return nil
 	case "go":
 		return errNotImplemented
 	case "java":

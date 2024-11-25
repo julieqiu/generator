@@ -16,13 +16,59 @@ package generate
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/googleapis/generator/internal/gitrepo"
 )
 
 func Run(ctx context.Context, arg ...string) error {
 	cfg := &config{}
-	_, err := parseFlags(cfg, arg)
+	cfg, err := parseFlags(cfg, arg)
 	if err != nil {
 		return err
 	}
+
+	for _, repo := range []struct {
+		dir, url string
+	}{
+		{
+			"/tmp/generator-googleapis",
+			"https://github.com/googleapis/googleapis",
+		},
+		{
+			"/tmp/generator-google-cloud-dotnet",
+			"https://github.com/googleapis/google-cloud-dotnet",
+		},
+	} {
+		slog.Info(fmt.Sprintf("Cloning %q to %q", repo.url, repo.dir))
+		_, err := gitrepo.CloneOrOpen(ctx, repo.dir, repo.url)
+		if err != nil {
+			return err
+		}
+	}
+	args := []string{
+		"run", "-v", "tmp-apis:/tmp/generator-googleapis",
+		"-v", "tmp-dotnet:/output",
+		"picard", "--command=update",
+		"--api-root=/tmp/generator-googleapis",
+		"--api=$api",
+		"--output=/output",
+	}
+	if err := runCommand("docker", args...); err != nil {
+		return err
+	}
 	return nil
+}
+
+func runCommand(c string, args ...string) error {
+	cmd := exec.Command(c, args...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	slog.Info(strings.Repeat("-", 80))
+	slog.Info(cmd.String())
+	return cmd.Run()
 }
