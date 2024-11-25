@@ -24,6 +24,7 @@ type config struct {
 	dir        string
 	googleapis string
 	language   string
+	output     string
 	patterns   []string
 }
 
@@ -32,7 +33,8 @@ func parseFlags(args []string) (*config, error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	flags.StringVar(&cfg.dir, "C", "", "change to `dir` before running generator")
 	flags.StringVar(&cfg.language, "language", "", "specify from cpp, csharp, go, java, node, php, python, ruby, rust")
-	flags.StringVar(&cfg.googleapis, "googleapis", "", "location of googleapis `dir`")
+	flags.StringVar(&cfg.googleapis, "googleapis", "/Users/julieqiu/code/googleapis/googleapis", "location of googleapis `dir`")
+	flags.StringVar(&cfg.output, "output", "/tmp/cloudsdkgenerator", "`dir` to write generated client library output")
 
 	// We don't want to print the whole usage message on each flags
 	// error, so we set to a no-op and do the printing ourselves.
@@ -56,17 +58,18 @@ Flags:
 		fmt.Fprintf(flags.Output(), "\n\n")
 	}
 
-	if len(args) != 1 {
-		usage()
-		return nil, fmt.Errorf("must specify a supported command")
-	}
-	cfg.cmd = args[0]
-
+	cfg.cmd = flag.Arg(0)
 	if err := flags.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			usage() // print usage only on help
 		}
 		return nil, err
+	}
+	if cfg.cmd == "generate" {
+		if cfg.language == "" || cfg.googleapis == "" {
+			usage() // print usage only on help
+			return nil, fmt.Errorf("missing flags")
+		}
 	}
 	return cfg, nil
 }
