@@ -14,22 +14,56 @@
 
 package container
 
-import "errors"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+	"os/exec"
+	"strings"
+)
 
 var errNotImplemented = errors.New("not implemented")
 
-func Generate() error {
+func Generate(ctx context.Context, apiRoot, apiPath, output, generatorInput string) error {
 	return errNotImplemented
 }
 
-func Clean() error {
+func Clean(ctx context.Context, repoRoot, apiPath string) error {
 	return errNotImplemented
 }
 
-func Build() error {
+func Build(ctx context.Context, repoRoot, apiPath string) error {
 	return errNotImplemented
 }
 
-func Configure() error {
+func Configure(ctx context.Context, apiRoot, apiPath, generatorInput string) error {
 	return errNotImplemented
+}
+
+const dotnetImageTag = "picard"
+
+func runDocker(googleapisDir, languageDir, api string) error {
+	args := []string{
+		"run",
+		"-v", fmt.Sprintf("%s:/apis", googleapisDir),
+		"-v", fmt.Sprintf("%s:/output", languageDir),
+		dotnetImageTag,
+		"--command=update",
+		"--api-root=/apis",
+		fmt.Sprintf("--api=%s", api),
+		"--output-root=/output",
+	}
+	return runCommand("docker", args...)
+}
+
+func runCommand(c string, args ...string) error {
+	cmd := exec.Command(c, args...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	slog.Info(strings.Repeat("-", 80))
+	slog.Info(cmd.String())
+	slog.Info(strings.Repeat("-", 80))
+	return cmd.Run()
 }
